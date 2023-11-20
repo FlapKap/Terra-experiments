@@ -173,6 +173,7 @@ class Node:
 @dataclass
 class Configuration:
     user: str
+    src_path: Path
     duration: int
     mqtt: Mqtt
     execution_epoch_s: int
@@ -182,15 +183,17 @@ class Configuration:
     def from_dict(obj: Any) -> 'Configuration':
         assert isinstance(obj, dict)
         user = from_str(obj.get("USER"))
+        src_path = Path(from_str(obj.get("SRC_PATH")))
         duration = from_int(obj.get("DURATION"))
         mqtt = Mqtt.from_dict(obj.get("MQTT"))
         execution_epoch_s = from_int(obj.get("EXECUTION_EPOCH_S"))
         nodes = from_list(Node.from_dict, obj.get("NODES"))
-        return Configuration(user, duration, mqtt, execution_epoch_s, nodes)
+        return Configuration(user, src_path, duration, mqtt, execution_epoch_s, nodes)
 
     def to_dict(self) -> dict:
         result = {
             "USER": from_str(self.user),
+            "SRC_PATH": self.src_path.resolve().as_posix(),
             "DURATION": from_int(self.duration),
             "MQTT": to_class(Mqtt, self.mqtt),
             "EXECUTION_EPOCH_S": from_int(self.execution_epoch_s),

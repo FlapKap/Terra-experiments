@@ -79,7 +79,7 @@ NODES_BY_SITE = {
     site: list(filter(lambda n: n.site == site, CONFIG.nodes)) for site in SITES
 }
 # RIOT info
-SRC_PATH = Path.cwd() / "src"
+SRC_PATH = CONFIG.src_path
 
 
 # make firmwares
@@ -720,7 +720,7 @@ async def mqtt_submit_coroutine():
             hostname=CONFIG.mqtt.address,
             port=CONFIG.mqtt.port,
             username=CONFIG.mqtt.username,
-            password=CONFIG.mqtt.password,
+            password=SECRETS["MQTT"]["PASSWORD"],
             clean_session=False,
             client_id=str(EXPERIMENT_ID),
         ) as client:
@@ -866,7 +866,7 @@ def populate_nodes_table(db_con, nodes: List[configuration.Node]):
             (
                 node.deveui,
                 node.appeui,
-                node.appkey,
+                SECRETS["LORAWAN"]["APPKEY"],
                 node.iot_lab_board_id,
                 node.iot_lab_radio_chipset,
                 node.site,

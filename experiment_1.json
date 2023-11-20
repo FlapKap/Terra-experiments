@@ -1,5 +1,6 @@
 {
     "USER": "berthels",
+    "SRC_PATH": "/home/kasper/Terra/src",
     "DURATION": 5,
     "EXECUTION_EPOCH_S": 20,
     "MQTT": {
