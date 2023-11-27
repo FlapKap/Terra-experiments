@@ -1,0 +1,40 @@
+{
+	"folders": [
+		{
+			"path": "../../Terra"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"environment.h": "c",
+			"expression.h": "c",
+			"expressiontests.h": "c",
+			"runtest.h": "c",
+			"embunit.h": "c",
+			"protocoltests.h": "c",
+			"encodeinput.h": "c",
+			"protocol_tests.h": "c",
+			"msg.h": "c",
+			"board.h": "c",
+			"cpu.h": "c",
+			"led.h": "c",
+			"operators.h": "c",
+			"saul.h": "c",
+			"chrono": "c",
+			"algorithm": "c",
+			"sched.h": "c",
+			"cpu_conf.h": "c",
+			"stm32l0xx.h": "c",
+			"stm32l072xx.h": "c",
+			"ztimer.h": "c",
+			"pm_layered.h": "c",
+			"cfg_rtt_default.h": "c",
+			"periph_cpu.h": "c",
+			"cpu_pm.h": "c",
+			"cpu_timer.h": "c"
+		}
+	}
+}
