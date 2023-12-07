@@ -1,8 +1,8 @@
 {
     "USER": "berthels",
-    "SRC_PATH": "/home/kasper/Terra/src",
+    "SRC_PATH": "/home/flapkap/Terra/app/terra",
     "DURATION": 5,
-    "EXECUTION_EPOCH_S": 20,
+    "EXECUTION_EPOCH_S": 15,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
@@ -27,10 +27,6 @@
                 {
                     "NAME": "hts221",
                     "TYPE": "SAUL_SENSE_HUM"
-                },
-                {
-                    "NAME": "lps22hb",
-                    "TYPE": "SAUL_SENSE_PRESS"
                 }
             ]
         }
