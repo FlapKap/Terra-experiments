@@ -9,7 +9,7 @@ from shutil import which, copy
 import argparse
 from datetime import datetime
 from importlib import resources as impressources
-from typing import List
+from typing import List, Literal
 import logging
 
 import regex
@@ -83,6 +83,9 @@ SRC_PATH = CONFIG.src_path
 
 
 # make firmwares
+
+
+
 def make_and_assign_firmware(node: configuration.Node):
     logging.info("make firmware for device: %s", node.deveui)
     env = os.environ.copy()
@@ -95,6 +98,18 @@ def make_and_assign_firmware(node: configuration.Node):
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
 
+
+    logging.info("making eeprom clear...")
+    clear_eeprom_src_path = SRC_PATH / ".." / "clear_eeprom"
+    p = subprocess.run(["make", "all"], cwd=clear_eeprom_src_path, env=env, check=True)
+    p = subprocess.run(
+        ["make", "info-build-json"], cwd=SRC_PATH, env=env, capture_output=True, check=True
+    )
+    build_info = json.loads(p.stdout)
+    flash_file = Path(build_info["FLASHFILE"])
+    clear_eeprom_bin_path = EXPERIMENT_FOLDER / f"{node.deveui}_clear_eeprom{flash_file.suffix}"
+    copy(flash_file, clear_eeprom_bin_path)
+    node.clear_eeprom_path = clear_eeprom_bin_path
     p = subprocess.run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
     ## find flash file
     p = subprocess.run(
@@ -102,9 +117,9 @@ def make_and_assign_firmware(node: configuration.Node):
     )
     build_info = json.loads(p.stdout)
     flash_file = Path(build_info["FLASHFILE"])
-    firmware_path = EXPERIMENT_FOLDER / f"{node.deveui}{flash_file.suffix}"
+    firmware_path = EXPERIMENT_FOLDER / f"{node.deveui}_terra{flash_file.suffix}"
     copy(flash_file, firmware_path)
-    node.firmware_path = firmware_path
+    node.terra_path = firmware_path
 
 
 def make_and_assign_all_firmware(nodes: List[configuration.Node]):
@@ -115,8 +130,10 @@ def make_and_assign_all_firmware(nodes: List[configuration.Node]):
 def find_and_assign_all_firmware(nodes: List[configuration.Node]):
     for firmware_path in EXPERIMENT_FOLDER.glob("*.elf"):
         for node in nodes:
-            if firmware_path.stem.lower() == node.deveui.lower():
-                node.firmware_path = firmware_path
+            if firmware_path.stem.lower() == f"{node.deveui.lower()}_terra":
+                node.terra_path = firmware_path
+            elif firmware_path.stem.lower() == f"{node.deveui.lower()}_clear_eeprom":
+                node.clear_eeprom_path = firmware_path
 
 
 def has_prerequisites(prerequisites=("iotlab", "parallel", "ssh", "scp")):
@@ -169,10 +186,10 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
         exit()
 
 
-async def upload_firmware(node: configuration.Node):
+async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "clear_eeprom"]):
     global EXPERIMENT_ID
     # check node contains info we need
-    if node.firmware_path is None:
+    if node.terra_path is None:
         logging.error("Node %s has no firmware", node.deveui)
         return
     if node.node_string_by_id is None or "":
@@ -187,7 +204,7 @@ async def upload_firmware(node: configuration.Node):
         "-l",
         node.node_string_by_id,
         "-fl",
-        str(node.firmware_path.absolute()),
+        str(node.terra_path.absolute() if firmware == "terra" else node.clear_eeprom_path.absolute()),
         stdout=asyncio.subprocess.PIPE,
     )
     stdout, _ = await p.communicate()
@@ -196,21 +213,22 @@ async def upload_firmware(node: configuration.Node):
     if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
         logging.error("Upload failed for node %s", node.deveui)
 
-    # stop node after upload
-    p = await asyncio.create_subprocess_exec(
-        "iotlab",
-        "node",
-        "--stop",
-        "-i",
-        str(EXPERIMENT_ID),
-        "-l",
-        node.node_string_by_id,
-        stdout=asyncio.subprocess.PIPE,
-    )
-    stdout, _ = await p.communicate()
-    if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
-        logging.error("Stop failed for node %s", node.deveui)
-        sys.exit()
+    # stop node after upload, but only if terra
+    if firmware == "terra":
+        p = await asyncio.create_subprocess_exec(
+            "iotlab",
+            "node",
+            "--stop",
+            "-i",
+            str(EXPERIMENT_ID),
+            "-l",
+            node.node_string_by_id,
+            stdout=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await p.communicate()
+        if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
+            logging.error("Stop failed for node %s", node.deveui)
+            sys.exit()
 
 
 async def serial_aggregation_coroutine(
@@ -727,8 +745,19 @@ async def mqtt_submit_coroutine():
             await asyncio.sleep(10)
             logging.info("submitting query to mqtt")
             for node in CONFIG.nodes:
-                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/push"
-                await client.publish(topic, "ChoKGAoWCgIIAQoCEAAKAggACgIQCAoCCAoQAQ==")
+                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/push"
+                frm_payload = "ChQKEgoQCgwKAggACgIQCAoCCAoQAQ=="
+                payload = {
+                    "downlinks": [
+                        {
+                            "f_port": 1,
+                            "frm_payload": frm_payload,
+                            "confirmed": True,
+                            "priority": "NORMAL",
+                        }
+                    ]
+                }
+                await client.publish(topic, json.dumps(payload))
     except asyncio.CancelledError:
         logging.info("canceling mqtt_submit_coroutine")
         raise
@@ -1063,12 +1092,16 @@ async def main():
 
     populate_nodes_table(db_con, CONFIG.nodes)
 
+    # clear eeprom on all boards
+    logging.info("clearing eeprom on all boards")
+    await asyncio.gather(*[upload_firmware(n,"clear_eeprom") for n in CONFIG.nodes])
+    await asyncio.sleep(20)
     if not args.dont_upload:
-        logging.info("uploading firmware")
+        logging.info("uploading terra firmware to all boards")
         # for n in CONFIG.nodes:
         #     await upload_firmware(n)
 
-        await asyncio.gather(*[upload_firmware(n) for n in CONFIG.nodes])
+        await asyncio.gather(*[upload_firmware(n, "terra") for n in CONFIG.nodes])
 
     logging.info("starting data collection")
 

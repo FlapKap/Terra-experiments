@@ -102,7 +102,8 @@ class Node:
     node_id: Optional[str] = None
     profile: Optional[str] = None
     sensors: Optional[List[Sensor]] = None
-    firmware_path: Optional[Path] = None
+    terra_path: Optional[Path] = None
+    clear_eeprom_path: Optional[Path] = None
 
     @staticmethod
     def from_dict(obj: Any) -> 'Node':
