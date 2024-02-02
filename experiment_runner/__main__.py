@@ -103,7 +103,7 @@ def make_and_assign_firmware(node: configuration.Node):
     clear_eeprom_src_path = SRC_PATH / ".." / "clear_eeprom"
     p = subprocess.run(["make", "all"], cwd=clear_eeprom_src_path, env=env, check=True)
     p = subprocess.run(
-        ["make", "info-build-json"], cwd=SRC_PATH, env=env, capture_output=True, check=True
+        ["make", "info-build-json"], cwd=clear_eeprom_src_path, env=env, capture_output=True, check=True
     )
     build_info = json.loads(p.stdout)
     flash_file = Path(build_info["FLASHFILE"])
@@ -625,7 +625,7 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                 ##TODO: verify that this actually works. Maybe correlation_ids use many ids and only 1 of them is relevant
                                 db_con.execute(
                                     "SELECT downlink_event_message_id FROM Downlink_Event_Message WHERE list_contains(correlation_ids, ?)",
-                                    (error_correlation_ids[0]),
+                                    [error_correlation_ids[0]],
                                 )
                                 downlink_event_message_id = db_con.fetchone()[0]
 
