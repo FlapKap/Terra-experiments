@@ -1,22 +1,24 @@
 {
     "USER": "berthels",
     "SRC_PATH": "/home/flapkap/Terra/app/terra",
-    "DURATION": 5,
+    "DURATION": 15,
     "EXECUTION_EPOCH_S": 15,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
         "USERNAME": "nes-test-application@ttn",
-        "TOPIC": "v3/nes-test-application@ttn/devices/#"
+        "TOPIC": "v3/nes-test-application@ttn/devices/#",
+        "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCEAIKAggICgIIFAoCCAAKAjBkCgIICQoCCAAKAjAECgIIDAoCCBEKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
+        "PAYLOAD_CONFIRMED": true
     },
     "NODES": [
         {
-            "TTN_DEVICE_ID": "eui-70b3d57ed005e88a",
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea59",
             "PROFILE": "stm32Profile",
             "RIOT_BOARD": "b-l072z-lrwan1",
             "IOT-LAB_BOARD_ID": "st-lrwan1",
             "IOT-LAB_RADIO_CHIPSET": "sx1276",
-            "DEVEUI": "70B3D57ED005E88A",
+            "DEVEUI": "70B3D57ED005EA59",
             "APPEUI": "0000000000000000",
             "SITE": "saclay",
             "SENSORS": [

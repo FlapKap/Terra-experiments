@@ -78,6 +78,8 @@ USER = CONFIG.user
 NODES_BY_SITE = {
     site: list(filter(lambda n: n.site == site, CONFIG.nodes)) for site in SITES
 }
+
+
 # RIOT info
 SRC_PATH = CONFIG.src_path
 
@@ -746,13 +748,12 @@ async def mqtt_submit_coroutine():
             logging.info("submitting query to mqtt")
             for node in CONFIG.nodes:
                 topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/push"
-                frm_payload = "ChQKEgoQCgwKAggACgIQCAoCCAoQAQ=="
                 payload = {
                     "downlinks": [
                         {
                             "f_port": 1,
-                            "frm_payload": frm_payload,
-                            "confirmed": True,
+                            "frm_payload": CONFIG.mqtt.payload,
+                            "confirmed": CONFIG.mqtt.payload_confirmed,
                             "priority": "NORMAL",
                         }
                     ]
@@ -1149,6 +1150,9 @@ async def main():
                 "populating power consumption measurements from %s from site %s", oml_file, site
             )
             populate_power_consumption_table_from_file(db_con, CONFIG.nodes, oml_file)
+    
+    logging.info("copying configuration file to data directory")
+    copy(EXPERIMENT_CONFIG_PATH, DATA_FOLDER / str(EXPERIMENT_ID))
 
 
 asyncio.run(main())

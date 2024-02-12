@@ -30,6 +30,10 @@ def from_int(x: Any) -> int:
     assert isinstance(x, int) and not isinstance(x, bool)
     return x
 
+def from_bool(x: Any) -> bool:
+    assert isinstance(x, bool)
+    return x
+
 
 def from_list(f: Callable[[Any], T], x: Any) -> List[T]:
     assert isinstance(x, list)
@@ -52,6 +56,8 @@ class Mqtt:
     port: int
     username: str
     topic: str
+    payload: str
+    payload_confirmed: bool
 
     @staticmethod
     def from_dict(obj: Any) -> 'Mqtt':
@@ -60,14 +66,18 @@ class Mqtt:
         port = from_int(obj.get("PORT"))
         username = from_str(obj.get("USERNAME"))
         topic = from_str(obj.get("TOPIC"))
-        return Mqtt(address, port, username, topic)
+        payload = from_str(obj.get("PAYLOAD"))
+        payload_confirmed = from_bool(obj.get("PAYLOAD_CONFIRMED"))
+        return Mqtt(address, port, username, topic, payload, payload_confirmed)
 
     def to_dict(self) -> dict:
         return {
             "address": from_str(self.address),
             "port": from_int(self.port),
             "username": from_str(self.username),
-            "topic": from_str(self.topic)
+            "topic": from_str(self.topic),
+            "payload": from_str(self.payload),
+            "payload_confirmed": from_bool(self.payload_confirmed)
         }
 
 
