@@ -1,0 +1,36 @@
+{
+    "USER": "berthels",
+    "SRC_PATH": "/home/kasper/Terra/app/terra",
+    "DURATION": 20,
+    "EXECUTION_EPOCH_S": 15,
+    "MQTT": {
+        "ADDRESS": "eu1.cloud.thethings.network",
+        "PORT": 1883,
+        "USERNAME": "nes-test-application@ttn",
+        "TOPIC": "v3/nes-test-application@ttn/devices/#",
+        "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCAAKAhACCgIICAoCCBQKAggACgIwZAoCCAkKAggACgIwBAoCCAwKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
+        "PAYLOAD_CONFIRMED": true
+    },
+    "NODES": [
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea59",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "samr34-xpro",
+            "IOT-LAB_BOARD_ID": "samr34",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA59",
+            "APPEUI": "0000000000000000",
+            "SITE": "grenoble",
+            "SENSORS": [
+                {
+                    "NAME": "\"Button(SW0)\"",
+                    "TYPE": "SAUL_SENSE_BTN"
+                },
+                {
+                    "NAME": "\"Button(SW0)\"",
+                    "TYPE": "SAUL_SENSE_BTN"
+                }
+            ]
+        }
+    ]
+}

@@ -732,8 +732,32 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
         logging.info("Stopping mqtt_submit_coroutine")
         raise
 
+async def mqtt_clear_down_queue_coroutine():
+    global EXPERIMENT_ID
+    try:
+        async with aiomqtt.Client(
+            hostname=CONFIG.mqtt.address,
+            port=CONFIG.mqtt.port,
+            username=CONFIG.mqtt.username,
+            password=SECRETS["MQTT"]["PASSWORD"],
+            clean_session=False,
+            client_id=str(EXPERIMENT_ID),
+        ) as client:
+            logging.info("clearing downlink queue")
+            for node in CONFIG.nodes:
+                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
+                payload = {
+                    "downlinks": []
+                }
+                await client.publish(topic, json.dumps(payload))
+    except asyncio.CancelledError:
+        logging.info("canceling mqtt_clear_down_queue_coroutine")
+        raise
+    except Exception as e:
+        logging.error(e)
+        raise
 
-async def mqtt_submit_coroutine():
+async def mqtt_submit_query_coroutine():
     global EXPERIMENT_ID
     try:
         async with aiomqtt.Client(
@@ -747,7 +771,7 @@ async def mqtt_submit_coroutine():
             await asyncio.sleep(10)
             logging.info("submitting query to mqtt")
             for node in CONFIG.nodes:
-                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/push"
+                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
                 payload = {
                     "downlinks": [
                         {
@@ -819,8 +843,9 @@ async def data_collection_tasks(db_con: duckdb.DuckDBPyConnection):
             [
                 # serial_aggregation_coroutine(site_url),
                 # radio_coroutine(site_url, [n.oml_name for n in nodelist]),
+                mqtt_clear_down_queue_coroutine(),
                 mqtt_collect_coroutine(db_con),
-                mqtt_submit_coroutine(),
+                mqtt_submit_query_coroutine(),
             ]
         )
     # tasks.append(commit())
