@@ -1,14 +1,14 @@
 {
     "USER": "berthels",
-    "SRC_PATH": "/home/flapkap/Terra/app/terra",
-    "DURATION": 15,
+    "SRC_PATH": "/home/kasper/Terra/app/terra",
+    "DURATION": 20,
     "EXECUTION_EPOCH_S": 15,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
         "USERNAME": "nes-test-application@ttn",
         "TOPIC": "v3/nes-test-application@ttn/devices/#",
-        "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCEAIKAggICgIIFAoCCAAKAjBkCgIICQoCCAAKAjAECgIIDAoCCBEKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
+        "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCAAKAhACCgIICAoCCBQKAggACgIwZAoCCAkKAggACgIwBAoCCAwKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
         "PAYLOAD_CONFIRMED": true
     },
     "NODES": [

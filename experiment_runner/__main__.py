@@ -101,17 +101,17 @@ def make_and_assign_firmware(node: configuration.Node):
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
 
 
-    logging.info("making eeprom clear...")
-    clear_eeprom_src_path = SRC_PATH / ".." / "clear_eeprom"
-    p = subprocess.run(["make", "all"], cwd=clear_eeprom_src_path, env=env, check=True)
+    logging.info("making flash clear...")
+    clear_flash_src_path = SRC_PATH / ".." / "clear_flash"
+    p = subprocess.run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
     p = subprocess.run(
-        ["make", "info-build-json"], cwd=clear_eeprom_src_path, env=env, capture_output=True, check=True
+        ["make", "info-build-json"], cwd=clear_flash_src_path, env=env, capture_output=True, check=True
     )
     build_info = json.loads(p.stdout)
     flash_file = Path(build_info["FLASHFILE"])
-    clear_eeprom_bin_path = EXPERIMENT_FOLDER / f"{node.deveui}_clear_eeprom{flash_file.suffix}"
-    copy(flash_file, clear_eeprom_bin_path)
-    node.clear_eeprom_path = clear_eeprom_bin_path
+    clear_flash_bin_path = EXPERIMENT_FOLDER / f"{node.deveui}_clear_flash{flash_file.suffix}"
+    copy(flash_file, clear_flash_bin_path)
+    node.clear_flash_path = clear_flash_bin_path
     p = subprocess.run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
     ## find flash file
     p = subprocess.run(
@@ -134,8 +134,8 @@ def find_and_assign_all_firmware(nodes: List[configuration.Node]):
         for node in nodes:
             if firmware_path.stem.lower() == f"{node.deveui.lower()}_terra":
                 node.terra_path = firmware_path
-            elif firmware_path.stem.lower() == f"{node.deveui.lower()}_clear_eeprom":
-                node.clear_eeprom_path = firmware_path
+            elif firmware_path.stem.lower() == f"{node.deveui.lower()}_clear_flash":
+                node.clear_flash_path = firmware_path
 
 
 def has_prerequisites(prerequisites=("iotlab", "parallel", "ssh", "scp")):
@@ -188,7 +188,7 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
         exit()
 
 
-async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "clear_eeprom"]):
+async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "clear_flash"]):
     global EXPERIMENT_ID
     # check node contains info we need
     if node.terra_path is None:
@@ -206,7 +206,7 @@ async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "
         "-l",
         node.node_string_by_id,
         "-fl",
-        str(node.terra_path.absolute() if firmware == "terra" else node.clear_eeprom_path.absolute()),
+        str(node.terra_path.absolute() if firmware == "terra" else node.clear_flash_path.absolute()),
         stdout=asyncio.subprocess.PIPE,
     )
     stdout, _ = await p.communicate()
@@ -1093,9 +1093,9 @@ async def main():
 
     populate_nodes_table(db_con, CONFIG.nodes)
 
-    # clear eeprom on all boards
-    logging.info("clearing eeprom on all boards")
-    await asyncio.gather(*[upload_firmware(n,"clear_eeprom") for n in CONFIG.nodes])
+    # # clear flash on all boards
+    logging.info("clearing flash on all boards")
+    await asyncio.gather(*[upload_firmware(n,"clear_flash") for n in CONFIG.nodes])
     await asyncio.sleep(20)
     if not args.dont_upload:
         logging.info("uploading terra firmware to all boards")

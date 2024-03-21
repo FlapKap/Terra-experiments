@@ -34,7 +34,16 @@
 			"cfg_rtt_default.h": "c",
 			"periph_cpu.h": "c",
 			"cpu_pm.h": "c",
-			"cpu_timer.h": "c"
+			"cpu_timer.h": "c",
+			"execution.h": "c",
+			"unistd.h": "c",
+			"kernel_defines.h": "c",
+			"strings.h": "c",
+			"features.h": "c",
+			"mtd_flashpage.h": "c",
+			"lorawan.h": "c",
+			"inttypes.h": "c",
+			"semtech_loramac.h": "c"
 		}
 	}
 }
