@@ -1,6 +1,6 @@
 {
     "USER": "berthels",
-    "SRC_PATH": "/home/kasper/Terra/app/terra",
+    "SRC_PATH": "/home/flapkap/Terra/app/terra",
     "DURATION": 20,
     "EXECUTION_EPOCH_S": 15,
     "MQTT": {
@@ -13,12 +13,12 @@
     },
     "NODES": [
         {
-            "TTN_DEVICE_ID": "eui-70b3d57ed005ea59",
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea57",
             "PROFILE": "stm32Profile",
             "RIOT_BOARD": "samr34-xpro",
             "IOT-LAB_BOARD_ID": "samr34",
             "IOT-LAB_RADIO_CHIPSET": "sx1276",
-            "DEVEUI": "70B3D57ED005EA59",
+            "DEVEUI": "70B3D57ED005EA57",
             "APPEUI": "0000000000000000",
             "SITE": "grenoble",
             "SENSORS": [
