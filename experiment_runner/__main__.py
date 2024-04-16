@@ -11,7 +11,7 @@ from datetime import datetime
 from importlib import resources as impressources
 from typing import List, Literal
 import logging
-
+import functools
 import regex
 import duckdb
 import aiomqtt
@@ -66,18 +66,32 @@ parser.add_argument(
     type=Path,
     help="folder containing to contain binaries, data and database files",
 )
-args = parser.parse_args()
+parser.add_argument("-d", "--debug", action="store_true")
+cli_args = parser.parse_args()
+
+
+
+def subprocess_run(*args, **kwargs):
+    if cli_args.debug:
+        logging.debug("running subprocess_run: %s", " ".join(*args))
+    return subprocess.run(*args, **kwargs)
+
+
+async def asyncio_create_subprocess_exec(*args, **kwargs):
+    if cli_args.debug:
+        logging.debug("running asyncio_create_subprocess_exec: %s", " ".join((str(arg) for arg in args)))
+    return await asyncio.create_subprocess_exec(*args, **kwargs)
 
 
 EXPERIMENT_ID = (
-    args.attach
+    cli_args.attach
 )  # None if we shouldnt attach, 0 if we should, but don't know the id, and anything else if we do know the id
 
-EXPERIMENT_FOLDER: Path = args.experiment_folder
+EXPERIMENT_FOLDER: Path = cli_args.experiment_folder
 DATA_FOLDER = EXPERIMENT_FOLDER / "data"
-EXPERIMENT_CONFIG_PATH = args.config
+EXPERIMENT_CONFIG_PATH = cli_args.config
 CONFIG = configuration.configuration_from_json(EXPERIMENT_CONFIG_PATH.read_text())
-SECRETS = json.loads(args.secrets.read_text())
+SECRETS = json.loads(cli_args.secrets.read_text())
 assert all(node.site for node in CONFIG.nodes)  # make sure all nodes have a site
 SITES: set[str] = {node.site for node in CONFIG.nodes}  # type: ignore[misc] # we know after this that all nodes have a site
 USER = CONFIG.user
@@ -107,8 +121,8 @@ def make_and_assign_firmware(node: configuration.Node):
 
     logging.info("making flash clear...")
     clear_flash_src_path = SRC_PATH / ".." / "clear_flash"
-    p = subprocess.run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
-    p = subprocess.run(
+    p = subprocess_run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
+    p = subprocess_run(
         ["make", "info-build-json"],
         cwd=clear_flash_src_path,
         env=env,
@@ -122,9 +136,9 @@ def make_and_assign_firmware(node: configuration.Node):
     )
     copy(flash_file, clear_flash_bin_path)
     node.clear_flash_path = clear_flash_bin_path
-    p = subprocess.run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
+    p = subprocess_run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
     ## find flash file
-    p = subprocess.run(
+    p = subprocess_run(
         ["make", "info-build-json"],
         cwd=SRC_PATH,
         env=env,
@@ -164,7 +178,7 @@ def has_prerequisites(prerequisites=("iotlab", "parallel", "ssh", "scp")):
 
 ## check if passwordless ssh is set up
 async def has_passwordless_ssh_access(user: str, site: str):
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "ssh", "-oNumberOfPasswordPrompts=0", f"{user}@{site}", "hostname"
     )
     return await p.wait() == 0
@@ -181,7 +195,7 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
             ]
         )
 
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab",
         "experiment",
         "submit",
@@ -206,15 +220,17 @@ async def upload_firmware(
     node: configuration.Node, firmware: Literal["terra", "clear_flash"]
 ):
     global EXPERIMENT_ID
+    if node.failed:
+        return
     # check node contains info we need
     if node.terra_path is None:
         logging.error("Node %s has no firmware", node.deveui)
         return
-    if node.node_string_by_id is None or "":
+    if node.node_string_by_id is None:
         logging.error("Node %s has no node string", node.deveui)
         return
 
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab",
         "node",
         "-i",
@@ -232,12 +248,16 @@ async def upload_firmware(
     stdout, _ = await p.communicate()
 
     ## check to see if we succeeded
-    if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
+    result = json.loads(stdout.decode("utf-8"))
+    if "0" not in result:
+        logging.error("no result for node %s with string %s. Marking as failed", node.deveui, node.node_string_by_id)
+        node.failed = True
+    elif result["0"][0] != node.network_address:
         logging.error("Upload failed for node %s", node.deveui)
 
     # stop node after upload, but only if terra
-    if firmware == "terra":
-        p = await asyncio.create_subprocess_exec(
+    if firmware == "terra" and not node.failed:
+        p = await asyncio_create_subprocess_exec(
             "iotlab",
             "node",
             "--stop",
@@ -261,7 +281,7 @@ async def serial_aggregation_coroutine(
     p = None  # initialize p to None so we in finally can check and terminate if it has been set
     try:
         logging.info("Starting serial aggregation collection")
-        p = await asyncio.create_subprocess_exec(
+        p = await asyncio_create_subprocess_exec(
             "ssh",
             f"{USER}@{site_url}",
             "serial_aggregator",
@@ -303,7 +323,7 @@ async def radio_coroutine(
         await asyncio.sleep(60)
         logging.info("starting radio collection")
         ## use GNU Parallel to run multiple processes through a single ssh connection and collect the results in 1 stdout stream
-        p = await asyncio.create_subprocess_exec(
+        p = await asyncio_create_subprocess_exec(
             "parallel",
             "--jobs",
             "0",
@@ -666,19 +686,24 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     "SELECT downlink_event_message_id FROM Downlink_Event_Message WHERE list_contains(correlation_ids, ?)",
                                     [error_correlation_ids[0]],
                                 )
-                                downlink_event_message_id = db_con.fetchone()[0]
+                                result = db_con.fetchone()
+                                if result is not None and len(result) > 0:
+                                    downlink_event_message_id = result[0]
 
-                                ## create the downlink_event_error message
-                                db_con.execute(
-                                    "INSERT INTO Downlink_Event_Error_Message VALUES (?,?,?,?,?)",
-                                    (
-                                        downlink_event_message_id,
-                                        error_namespace,
-                                        error_id,
-                                        error_message,
-                                        error_code,
-                                    ),
-                                )
+                                    ## create the downlink_event_error message
+                                    db_con.execute(
+                                        "INSERT INTO Downlink_Event_Error_Message VALUES (?,?,?,?,?)",
+                                        (
+                                            downlink_event_message_id,
+                                            error_namespace,
+                                            error_id,
+                                            error_message,
+                                            error_code,
+                                        )
+                                    )
+                                else:
+                                    logging.error("downlink failed but no downlink event message found")
+                                
                             case ["down", down_type]:
                                 # region example
                                 # {
@@ -818,7 +843,7 @@ async def mqtt_submit_query_coroutine():
         ) as client:
             await asyncio.sleep(10)
             logging.info("submitting query to mqtt")
-            for node in CONFIG.nodes:
+            for node in (node for node in CONFIG.nodes if not node.failed):
                 topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
                 payload = {
                     "downlinks": [
@@ -910,8 +935,8 @@ async def download_data_folder(
     # make sure local path exists
     if not local_path_with_site.exists():
         local_path.mkdir(parents=True)
-    p = await asyncio.create_subprocess_exec(
-        "scp", "-r", f"{user}@{site_url}:{remote_path}", local_path_with_site
+    p = await asyncio_create_subprocess_exec(
+        "scp", "-r", f"{user}@{site_url}:{remote_path}", str(local_path_with_site)
     )
     return await p.wait()
 
@@ -935,7 +960,7 @@ async def get_nodes_from_iotlab():
     #     "y": "31.97",
     #     "z": "2.58"
     # }
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab",
         "experiment",
         "get",
@@ -965,7 +990,7 @@ def populate_nodes_table(db_con, nodes: List[configuration.Node]):
     db_con.begin()
     for node in nodes:
         db_con.execute(
-            "INSERT INTO Node (node_deveui,node_appeui,node_appkey,board_id,radio_chipset,node_site,profile,riot_board) VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO Node (node_deveui,node_appeui,node_appkey,board_id,radio_chipset,node_site,profile,riot_board,failed) VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 node.deveui,
                 node.appeui,
@@ -975,13 +1000,14 @@ def populate_nodes_table(db_con, nodes: List[configuration.Node]):
                 node.site,
                 node.profile,
                 node.riot_board,
+                node.failed
             ),
         )
     db_con.commit()
 
 
 async def find_latest_running_experiment():
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab", "experiment", "get", "-e", stdout=asyncio.subprocess.PIPE
     )
     out, _ = await p.communicate()
@@ -997,7 +1023,7 @@ async def find_latest_running_experiment():
 
 
 async def wait_for_experiment_to_start():
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab", "experiment", "wait", "-i", str(EXPERIMENT_ID)
     )
     return await p.wait() == 0
@@ -1078,7 +1104,7 @@ def populate_power_consumption_table_from_file(
 
 
 async def is_experiment_running():
-    p = await asyncio.create_subprocess_exec(
+    p = await asyncio_create_subprocess_exec(
         "iotlab",
         "experiment",
         "get",
@@ -1116,7 +1142,7 @@ async def main():
         logging.error("Prerequisites for this script are not installed")
         sys.exit(0)
 
-    if not args.dont_make:
+    if not cli_args.dont_make:
         logging.info("making firmware")
         make_and_assign_all_firmware(CONFIG.nodes)
     else:
@@ -1131,7 +1157,7 @@ async def main():
         sys.exit(0)
 
     # we upload and run the experiment below, so if we dont want to do that: early exit
-    if args.dont_run:
+    if cli_args.dont_run:
         sys.exit(0)
 
     if EXPERIMENT_ID is None:
@@ -1172,7 +1198,7 @@ async def main():
     logging.info("clearing flash on all boards")
     await asyncio.gather(*[upload_firmware(n, "clear_flash") for n in CONFIG.nodes])
     await asyncio.sleep(20)
-    if not args.dont_upload:
+    if not cli_args.dont_upload:
         logging.info("uploading terra firmware to all boards")
         # for n in CONFIG.nodes:
         #     await upload_firmware(n)
@@ -1182,7 +1208,7 @@ async def main():
     logging.info("starting data collection")
 
     ## start all boards
-    subprocess.run(["iotlab", "node", "--start", "-i", str(EXPERIMENT_ID)], check=True)
+    subprocess_run(["iotlab", "node", "--start", "-i", str(EXPERIMENT_ID)], check=True)
     await asyncio.sleep(5)
     collection_task = asyncio.create_task(data_collection_tasks(db_con))
     # progress_task = asyncio.create_task(print_progress(db_con))

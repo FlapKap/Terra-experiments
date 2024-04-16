@@ -114,6 +114,7 @@ class Node:
     sensors: Optional[List[Sensor]] = None
     terra_path: Optional[Path] = None
     clear_eeprom_path: Optional[Path] = None
+    failed: bool = False
 
     @staticmethod
     def from_dict(obj: Any) -> 'Node':

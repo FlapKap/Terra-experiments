@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS Node (
     radio_chipset VARCHAR NOT NULL,
     node_site VARCHAR REFERENCES Site(name),
     profile VARCHAR NOT NULL,
-    riot_board VARCHAR NOT NULL
+    riot_board VARCHAR NOT NULL,
+    failed BOOLEAN NOT NULL
 );
 
 -- POWER_CONSUMPTION
