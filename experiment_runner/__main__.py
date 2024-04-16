@@ -54,7 +54,13 @@ parser.add_argument(
     default=Path.cwd() / "experiment.json",
     help="Path to configuration file. Default: experiment.json",
 )
-parser.add_argument( "-s", "--secrets", type=Path, default=Path.cwd() / "secrets.json", help="path to json file that contains secrets like the mqtt api key, and the appkey for devices")
+parser.add_argument(
+    "-s",
+    "--secrets",
+    type=Path,
+    default=Path.cwd() / "secrets.json",
+    help="path to json file that contains secrets like the mqtt api key, and the appkey for devices",
+)
 parser.add_argument(
     "experiment_folder",
     type=Path,
@@ -87,7 +93,6 @@ SRC_PATH = CONFIG.src_path
 # make firmwares
 
 
-
 def make_and_assign_firmware(node: configuration.Node):
     logging.info("make firmware for device: %s", node.deveui)
     env = os.environ.copy()
@@ -100,22 +105,31 @@ def make_and_assign_firmware(node: configuration.Node):
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
 
-
     logging.info("making flash clear...")
     clear_flash_src_path = SRC_PATH / ".." / "clear_flash"
     p = subprocess.run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
     p = subprocess.run(
-        ["make", "info-build-json"], cwd=clear_flash_src_path, env=env, capture_output=True, check=True
+        ["make", "info-build-json"],
+        cwd=clear_flash_src_path,
+        env=env,
+        capture_output=True,
+        check=True,
     )
     build_info = json.loads(p.stdout)
     flash_file = Path(build_info["FLASHFILE"])
-    clear_flash_bin_path = EXPERIMENT_FOLDER / f"{node.deveui}_clear_flash{flash_file.suffix}"
+    clear_flash_bin_path = (
+        EXPERIMENT_FOLDER / f"{node.deveui}_clear_flash{flash_file.suffix}"
+    )
     copy(flash_file, clear_flash_bin_path)
     node.clear_flash_path = clear_flash_bin_path
     p = subprocess.run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
     ## find flash file
     p = subprocess.run(
-        ["make", "info-build-json"], cwd=SRC_PATH, env=env, capture_output=True, check=True
+        ["make", "info-build-json"],
+        cwd=SRC_PATH,
+        env=env,
+        capture_output=True,
+        check=True,
     )
     build_info = json.loads(p.stdout)
     flash_file = Path(build_info["FLASHFILE"])
@@ -188,7 +202,9 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
         exit()
 
 
-async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "clear_flash"]):
+async def upload_firmware(
+    node: configuration.Node, firmware: Literal["terra", "clear_flash"]
+):
     global EXPERIMENT_ID
     # check node contains info we need
     if node.terra_path is None:
@@ -206,7 +222,11 @@ async def upload_firmware(node: configuration.Node, firmware: Literal["terra", "
         "-l",
         node.node_string_by_id,
         "-fl",
-        str(node.terra_path.absolute() if firmware == "terra" else node.clear_flash_path.absolute()),
+        str(
+            node.terra_path.absolute()
+            if firmware == "terra"
+            else node.clear_flash_path.absolute()
+        ),
         stdout=asyncio.subprocess.PIPE,
     )
     stdout, _ = await p.communicate()
@@ -509,7 +529,9 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     parsed_msg["received_at"]
                                 )
                                 gateway_recieved_at = from_str_to_datetime(
-                                    parsed_msg["uplink_message"]["rx_metadata"][0]["time"]
+                                    parsed_msg["uplink_message"]["rx_metadata"][0][
+                                        "time"
+                                    ]
                                 )
                                 network_received_at = from_str_to_datetime(
                                     parsed_msg["uplink_message"]["rx_metadata"][0][
@@ -522,9 +544,15 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     else 0
                                 )
                                 frame_port = parsed_msg["uplink_message"]["f_port"]
-                                frame_payload = parsed_msg["uplink_message"]["frm_payload"]
-                                rx_metadata = parsed_msg["uplink_message"]["rx_metadata"][0]
-                                gateway_deveui = rx_metadata["gateway_ids"]["gateway_id"]
+                                frame_payload = parsed_msg["uplink_message"][
+                                    "frm_payload"
+                                ]
+                                rx_metadata = parsed_msg["uplink_message"][
+                                    "rx_metadata"
+                                ][0]
+                                gateway_deveui = rx_metadata["gateway_ids"][
+                                    "gateway_id"
+                                ]
                                 rssi = rx_metadata["rssi"]
                                 snr = rx_metadata.get("snr")
 
@@ -564,7 +592,12 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                 ## create content_message
                                 db_con.execute(
                                     "INSERT INTO Content_Message VALUES (?,?,?,?) RETURNING content_message_id",
-                                    (message_id, frame_counter, frame_port, frame_payload),
+                                    (
+                                        message_id,
+                                        frame_counter,
+                                        frame_port,
+                                        frame_payload,
+                                    ),
                                 )
                                 content_message_id = db_con.fetchone()[0]
                                 ## create uplink_message
@@ -614,14 +647,18 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                 # endregion
 
                                 # Extract needed info from mqtt payload
-                                error_namespace = parsed_msg["downlink_failed"]["error"][
-                                    "namespace"
+                                error_namespace = parsed_msg["downlink_failed"][
+                                    "error"
+                                ]["namespace"]
+                                error_id = parsed_msg["downlink_failed"]["error"][
+                                    "name"
                                 ]
-                                error_id = parsed_msg["downlink_failed"]["error"]["name"]
                                 error_message = parsed_msg["downlink_failed"]["error"][
                                     "message_format"
                                 ]
-                                error_code = parsed_msg["downlink_failed"]["error"]["code"]
+                                error_code = parsed_msg["downlink_failed"]["error"][
+                                    "code"
+                                ]
                                 ## find the related Downlink event message
                                 error_correlation_ids = parsed_msg["correlation_ids"]
                                 ##TODO: verify that this actually works. Maybe correlation_ids use many ids and only 1 of them is relevant
@@ -686,11 +723,17 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     -1
                                 )  ## TODO: fix. right now f_cnt is missing from the api response
                                 # frame_counter: int = parsed_msg[downlink_key]["f_cnt"]
-                                frame_payload: str = parsed_msg[downlink_key]["frm_payload"]
+                                frame_payload: str = parsed_msg[downlink_key][
+                                    "frm_payload"
+                                ]
                                 confirmed: bool = parsed_msg[downlink_key]["confirmed"]
-                                priority: str = "NORMAL"  # TODO: as soon as priority is provided by API fix this
+                                priority: str = (
+                                    "NORMAL"  # TODO: as soon as priority is provided by API fix this
+                                )
                                 # priority: str = parsed_msg[downlink_key]["priority"]
-                                correlation_ids: list[str] = parsed_msg["correlation_ids"]
+                                correlation_ids: list[str] = parsed_msg[
+                                    "correlation_ids"
+                                ]
 
                                 # add to db
                                 ## add message
@@ -703,7 +746,12 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                 ## add content message
                                 db_con.execute(
                                     "INSERT INTO Content_Message VALUES (?,?,?,?) RETURNING content_message_id",
-                                    (message_id, frame_counter, frame_port, frame_payload),
+                                    (
+                                        message_id,
+                                        frame_counter,
+                                        frame_port,
+                                        frame_payload,
+                                    ),
                                 )
                                 content_message_id = db_con.fetchone()[0]
 
@@ -732,6 +780,7 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
         logging.info("Stopping mqtt_submit_coroutine")
         raise
 
+
 async def mqtt_clear_down_queue_coroutine():
     global EXPERIMENT_ID
     try:
@@ -746,9 +795,7 @@ async def mqtt_clear_down_queue_coroutine():
             logging.info("clearing downlink queue")
             for node in CONFIG.nodes:
                 topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
-                payload = {
-                    "downlinks": []
-                }
+                payload = {"downlinks": []}
                 await client.publish(topic, json.dumps(payload))
     except asyncio.CancelledError:
         logging.info("canceling mqtt_clear_down_queue_coroutine")
@@ -756,6 +803,7 @@ async def mqtt_clear_down_queue_coroutine():
     except Exception as e:
         logging.error(e)
         raise
+
 
 async def mqtt_submit_query_coroutine():
     global EXPERIMENT_ID
@@ -941,7 +989,9 @@ async def find_latest_running_experiment():
 
     running_experiments = json.loads(out_decoded)["Running"]
     logging.info(
-        "Found %s running experiments: %s", len(running_experiments), running_experiments
+        "Found %s running experiments: %s",
+        len(running_experiments),
+        running_experiments,
     )
     return sorted(running_experiments)[-1]
 
@@ -981,7 +1031,7 @@ def populate_power_consumption_table_from_file(
     if node is None:
         logging.error("Could not find node for %s", file_path.name)
         return
-    
+
     # oml is used through some magic in the following db_con.execute call
     # pylint: disable=unused-variable
     oml = db_con.read_csv(
@@ -1120,7 +1170,7 @@ async def main():
 
     # # clear flash on all boards
     logging.info("clearing flash on all boards")
-    await asyncio.gather(*[upload_firmware(n,"clear_flash") for n in CONFIG.nodes])
+    await asyncio.gather(*[upload_firmware(n, "clear_flash") for n in CONFIG.nodes])
     await asyncio.sleep(20)
     if not args.dont_upload:
         logging.info("uploading terra firmware to all boards")
@@ -1172,10 +1222,12 @@ async def main():
         )
         for oml_file in oml_files:
             logging.info(
-                "populating power consumption measurements from %s from site %s", oml_file, site
+                "populating power consumption measurements from %s from site %s",
+                oml_file,
+                site,
             )
             populate_power_consumption_table_from_file(db_con, CONFIG.nodes, oml_file)
-    
+
     logging.info("copying configuration file to data directory")
     copy(EXPERIMENT_CONFIG_PATH, DATA_FOLDER / str(EXPERIMENT_ID))
 
