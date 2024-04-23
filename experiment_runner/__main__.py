@@ -13,7 +13,7 @@ from typing import List, Literal
 import logging
 import functools
 import regex
-import duckdb
+import sqlite3
 import aiomqtt
 
 from experiment_runner import configuration
@@ -274,7 +274,7 @@ async def upload_firmware(
 
 
 async def serial_aggregation_coroutine(
-    site_url: str, db_con: duckdb.DuckDBPyConnection
+    site_url: str, db_con: sqlite3.Connection
 ):
     global EXPERIMENT_ID
     nodes_by_id = {node.node_id: node for node in CONFIG.nodes}
@@ -314,7 +314,7 @@ async def serial_aggregation_coroutine(
 
 
 async def radio_coroutine(
-    site_url: str, oml_files: List[str], db_con: duckdb.DuckDBPyConnection
+    site_url: str, oml_files: List[str], db_con: sqlite3.Connection
 ):
     global EXPERIMENT_ID
     p = None  # initialize p to None so we in the except block can check and terminate if it has been set
@@ -380,7 +380,7 @@ async def radio_coroutine(
         raise
 
 
-async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
+async def mqtt_collect_coroutine(db_con: sqlite3.Connection):
     global EXPERIMENT_ID
 
     def from_str_to_datetime(s):
@@ -456,11 +456,11 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     parsed_msg["join_accept"]["received_at"]
                                 )
 
-                                db_con.execute(
+                                res = db_con.execute(
                                     "INSERT INTO Message (related_node, network_received_at) VALUES (?,?) RETURNING message_id",
                                     (dev_eui, network_received_at),
-                                )
-                                message_id = db_con.fetchone()[0]
+                                ).fetchone()
+                                message_id = res[0]
                                 db_con.execute(
                                     "INSERT INTO Join_Message (join_message_id, app_received_at) VALUES (?,?)",
                                     (message_id, app_received_at),
@@ -594,23 +594,23 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
 
                                 # add to db
                                 ## check if gateway exists and if not, create it
-                                db_con.execute(
+                                res = db_con.execute(
                                     "SELECT * FROM Gateway WHERE gateway_id = ?",
                                     (gateway_deveui,),
-                                )
-                                if db_con.fetchone() is None:
+                                ).fetchone()
+                                if res is None:
                                     db_con.execute(
                                         "INSERT INTO Gateway (gateway_id) VALUES (?)",
                                         (gateway_deveui,),
                                     )
                                 ## create message
-                                db_con.execute(
+                                res = db_con.execute(
                                     "INSERT INTO Message (related_node, network_received_at) VALUES (?,?) RETURNING message_id",
                                     (dev_eui, network_received_at),
-                                )
-                                message_id = db_con.fetchone()[0]
+                                ).fetchone()
+                                message_id = res[0]
                                 ## create content_message
-                                db_con.execute(
+                                res = db_con.execute(
                                     "INSERT INTO Content_Message VALUES (?,?,?,?) RETURNING content_message_id",
                                     (
                                         message_id,
@@ -618,8 +618,8 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                         frame_port,
                                         frame_payload,
                                     ),
-                                )
-                                content_message_id = db_con.fetchone()[0]
+                                ).fetchone()
+                                content_message_id = res[0]
                                 ## create uplink_message
                                 db_con.execute(
                                     "INSERT INTO Uplink_Message VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -638,6 +638,7 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     ),
                                 )
                             case ["down", "failed"]:
+                                logging.debug("downlink failed")
                                 # region example
                                 # {
                                 # "end_device_ids" : {
@@ -680,28 +681,39 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                     "code"
                                 ]
                                 ## find the related Downlink event message
+                                ## loop through all error correlation id's and find one that matches
+                                ## we assume there is only one match so we break when found
                                 error_correlation_ids = parsed_msg["correlation_ids"]
-                                ##TODO: verify that this actually works. Maybe correlation_ids use many ids and only 1 of them is relevant
-                                db_con.execute(
-                                    "SELECT downlink_event_message_id FROM Downlink_Event_Message WHERE list_contains(correlation_ids, ?)",
-                                    [error_correlation_ids[0]],
-                                )
-                                result = db_con.fetchone()
-                                if result is not None and len(result) > 0:
-                                    downlink_event_message_id = result[0]
+                                logging.error(f"parsed_msg{parsed_msg}")
+                                downlink_event_message_id = None
+                                for corr_id in error_correlation_ids:
+                                    logging.error(f"corr_id: {corr_id}")
+                                    result =db_con.execute(
+                                        """
+                                        SELECT DISTINCT Downlink_Event_Message.downlink_event_message_id 
+                                        FROM Downlink_Event_Message, json_each(Downlink_Event_Message.correlation_ids) 
+                                        WHERE json_each.value = ?
+                                        """,
+                                        [corr_id],
+                                    ).fetchone()
+                                    if result is not None and len(result) > 0:
+                                        logging.debug("found downlink event message id: %s", result[0])
+                                        downlink_event_message_id = result[0]
+                                        
 
-                                    ## create the downlink_event_error message
-                                    db_con.execute(
-                                        "INSERT INTO Downlink_Event_Error_Message VALUES (?,?,?,?,?)",
-                                        (
-                                            downlink_event_message_id,
-                                            error_namespace,
-                                            error_id,
-                                            error_message,
-                                            error_code,
+                                    ## create the downlink_event_error message if we found the id
+                                        db_con.execute(
+                                            "INSERT INTO Downlink_Event_Error_Message VALUES (?,?,?,?,?)",
+                                            (
+                                                downlink_event_message_id,
+                                                error_namespace,
+                                                error_id,
+                                                error_message,
+                                                error_code,
+                                            )
                                         )
-                                    )
-                                else:
+                                        break
+                                if downlink_event_message_id is None:
                                     logging.error("downlink failed but no downlink event message found")
                                 
                             case ["down", down_type]:
@@ -762,14 +774,14 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
 
                                 # add to db
                                 ## add message
-                                db_con.execute(
+                                result = db_con.execute(
                                     "INSERT INTO Message (related_node, network_received_at) VALUES (?,?) RETURNING message_id",
                                     (dev_eui, network_received_at),
-                                )
-                                message_id = db_con.fetchone()[0]
+                                ).fetchone()
+                                message_id = result[0]
 
                                 ## add content message
-                                db_con.execute(
+                                result = db_con.execute(
                                     "INSERT INTO Content_Message VALUES (?,?,?,?) RETURNING content_message_id",
                                     (
                                         message_id,
@@ -777,8 +789,8 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                         frame_port,
                                         frame_payload,
                                     ),
-                                )
-                                content_message_id = db_con.fetchone()[0]
+                                ).fetchone()
+                                content_message_id = result[0]
 
                                 ## add downlink event message
                                 db_con.execute(
@@ -788,7 +800,7 @@ async def mqtt_collect_coroutine(db_con: duckdb.DuckDBPyConnection):
                                         confirmed,
                                         down_type,
                                         priority,
-                                        correlation_ids,
+                                        json.dumps(correlation_ids),
                                     ),
                                 )
                             case ["service", "data"]:
@@ -864,7 +876,7 @@ async def mqtt_submit_query_coroutine():
         raise
 
 
-async def print_progress(db_con: duckdb.DuckDBPyConnection):
+async def print_progress(db_con: sqlite3.Connection):
     try:
         while True:
             # print("\n" * 3, end="")
@@ -898,7 +910,7 @@ async def print_progress(db_con: duckdb.DuckDBPyConnection):
         raise
 
 
-async def commit(db_con: duckdb.DuckDBPyConnection):
+async def commit(db_con: sqlite3.Connection):
     try:
         while True:
             await asyncio.sleep(5)
@@ -908,7 +920,7 @@ async def commit(db_con: duckdb.DuckDBPyConnection):
         raise
 
 
-async def data_collection_tasks(db_con: duckdb.DuckDBPyConnection):
+async def data_collection_tasks(db_con: sqlite3.Connection):
     tasks = []
     for nodelist in NODES_BY_SITE.values():
         site_url = nodelist[0].site_url
@@ -980,14 +992,13 @@ def populate_sites_table(db_con):
 
 
 def create_and_initialise_db(db_path: Path):
-    db_con = duckdb.connect(f"{str(db_path)}")
+    db_con = sqlite3.connect(f"{str(db_path)}")
 
-    db_con.execute("".join(CREATE_SQL))
+    db_con.executescript("".join(CREATE_SQL))
     return db_con
 
 
 def populate_nodes_table(db_con, nodes: List[configuration.Node]):
-    db_con.begin()
     for node in nodes:
         db_con.execute(
             "INSERT INTO Node (node_deveui,node_appeui,node_appkey,board_id,radio_chipset,node_site,profile,riot_board,failed) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -1047,60 +1058,62 @@ def populate_traces_table_from_file(db_con, nodes, file_path: Path):
     db_con.executemany(
         "INSERT INTO Trace (node_id, timestamp, message) VALUES (?,?,?)", traces
     )
+    db_con.commit()
 
 
 def populate_power_consumption_table_from_file(
     db_con, nodes: List[configuration.Node], file_path: Path
 ):
-    # rows = []
     node = next(filter(lambda node: node.oml_name == file_path.name, nodes))
     if node is None:
         logging.error("Could not find node for %s", file_path.name)
         return
 
-    # oml is used through some magic in the following db_con.execute call
-    # pylint: disable=unused-variable
-    oml = db_con.read_csv(
-        file_path,
-        skiprows=9,
-        names=[
-            "exp_runtime",
-            "schema",
-            "cnmc",
-            "timestamp_s",
-            "timestamp_us",
-            "power",
-            "voltage",
-            "current",
-        ],
-    )
-    db_con.execute(
-        f"WITH PC AS (SELECT '{node.deveui}' as node_id, make_timestamp(timestamp_s * 1000000 + timestamp_us) as timestamp, current, power, voltage FROM oml) INSERT INTO Power_Consumption BY NAME SELECT * from PC"
-    )
-    # matcher = regex.compile(
-    #     r"^(?P<exp_runtime>\d+(\.\d*)?)\s+(?P<schema>\d+)\s+(?P<cnmc>\d+)\s+(?P<timestamp_s>\d+)\s+(?P<timestamp_us>\d+)\s+(?P<power>\d+(\.\d*)?)\s+(?P<voltage>\d+(\.\d*)?)\s+(?P<current>\d+(\.\d*)?)$"
+    # # oml is used through some magic in the following db_con.execute call
+    # # pylint: disable=unused-variable
+    # oml = db_con.read_csv(
+    #     file_path,
+    #     skiprows=9,
+    #     names=[
+    #         "exp_runtime",
+    #         "schema",
+    #         "cnmc",
+    #         "timestamp_s",
+    #         "timestamp_us",
+    #         "power",
+    #         "voltage",
+    #         "current",
+    #     ],
     # )
+    # db_con.execute(
+    #     f"WITH PC AS (SELECT '{node.deveui}' as node_id, make_timestamp(timestamp_s * 1000000 + timestamp_us) as timestamp, current, power, voltage FROM oml) INSERT INTO Power_Consumption BY NAME SELECT * from PC"
+    # )
+    matcher = regex.compile(
+        r"^(?P<exp_runtime>\d+(\.\d*)?)\s+(?P<schema>\d+)\s+(?P<cnmc>\d+)\s+(?P<timestamp_s>\d+)\s+(?P<timestamp_us>\d+)\s+(?P<power>\d+(\.\d*)?)\s+(?P<voltage>\d+(\.\d*)?)\s+(?P<current>\d+(\.\d*)?)$"
+    )
 
-    # with file_path.open() as f:
-    #     for line in f:
-    #         record = matcher.match(line)
-    #         if record is None:
-    #             continue
-    #         timestamp = int(
-    #             int(record["timestamp_s"]) * 1e6 + int(record["timestamp_us"])
-    #         )
-    #         row = (
-    #             node.deveui,
-    #             datetime.fromtimestamp(timestamp / 1e6),
-    #             float(record["current"]),
-    #             float(record["voltage"]),
-    #             float(record["power"]),
-    #         )
-    #         rows.append(row)
-    # db_con.executemany(
-    #     "INSERT INTO Power_Consumption (node_id, timestamp, current, voltage, power) VALUES (?,?,?,?,?)",
-    #     rows,
-    # )
+    rows = []
+    with file_path.open() as f:
+        for line in f:
+            record = matcher.match(line)
+            if record is None:
+                continue
+            timestamp = int(
+                int(record["timestamp_s"]) * 1e6 + int(record["timestamp_us"])
+            )
+            row = (
+                node.deveui,
+                datetime.fromtimestamp(timestamp / 1e6),
+                float(record["current"]),
+                float(record["voltage"]),
+                float(record["power"]),
+            )
+            rows.append(row)
+    db_con.executemany(
+        "INSERT INTO Power_Consumption (node_id, timestamp, current, voltage, power) VALUES (?,?,?,?,?)",
+        rows,
+    )
+    db_con.commit()
 
 
 async def is_experiment_running():
@@ -1170,8 +1183,8 @@ async def main():
     # find experiment
     await wait_for_experiment_to_start()
 
-    db_path = EXPERIMENT_FOLDER / f"{EXPERIMENT_ID}.duckdb"
-    logging.info("Create DuckDB for experiment data at %s", db_path)
+    db_path = EXPERIMENT_FOLDER / f"{EXPERIMENT_ID}.db"
+    logging.info("Create SQLite for experiment data at %s", db_path)
     # Check if file already exists
     if db_path.exists():
         answer = input(
