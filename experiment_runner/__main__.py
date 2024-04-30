@@ -255,22 +255,22 @@ async def upload_firmware(
     elif result["0"][0] != node.network_address:
         logging.error("Upload failed for node %s", node.deveui)
 
-    # stop node after upload, but only if terra
-    if firmware == "terra" and not node.failed:
-        p = await asyncio_create_subprocess_exec(
-            "iotlab",
-            "node",
-            "--stop",
-            "-i",
-            str(EXPERIMENT_ID),
-            "-l",
-            node.node_string_by_id,
-            stdout=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await p.communicate()
-        if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
-            logging.error("Stop failed for node %s", node.deveui)
-            sys.exit()
+    # # stop node after upload, but only if terra
+    # if firmware == "terra" and not node.failed:
+    #     p = await asyncio_create_subprocess_exec(
+    #         "iotlab",
+    #         "node",
+    #         "--stop",
+    #         "-i",
+    #         str(EXPERIMENT_ID),
+    #         "-l",
+    #         node.node_string_by_id,
+    #         stdout=asyncio.subprocess.PIPE,
+    #     )
+    #     stdout, _ = await p.communicate()
+    #     if not json.loads(stdout.decode("utf-8"))["0"][0] == node.network_address:
+    #         logging.error("Stop failed for node %s", node.deveui)
+    #         sys.exit()
 
 
 async def serial_aggregation_coroutine(
@@ -1205,7 +1205,7 @@ async def main():
     # go through nodes returned and populate internal node list with proper addresses
     populate_nodes_with_addresses_from_iotlab(iotlab_nodes)
 
-    populate_nodes_table(db_con, CONFIG.nodes)
+    
 
     # # clear flash on all boards
     logging.info("clearing flash on all boards")
@@ -1217,6 +1217,9 @@ async def main():
         #     await upload_firmware(n)
 
         await asyncio.gather(*[upload_firmware(n, "terra") for n in CONFIG.nodes])
+
+    # saving nodes in experiment db
+    populate_nodes_table(db_con, CONFIG.nodes)
 
     logging.info("starting data collection")
 
