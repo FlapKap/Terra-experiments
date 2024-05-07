@@ -7,7 +7,8 @@ secrets.json
 data/
 *.duckdb
 *.duckdb.wal
-
+*.db
+*.bin
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,windows,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,macos,windows,python
 
