@@ -119,34 +119,43 @@ def make_and_assign_firmware(node: configuration.Node):
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
 
-    logging.info("making flash clear...")
-    clear_flash_src_path = SRC_PATH / ".." / "clear_flash"
-    p = subprocess_run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
-    p = subprocess_run(
-        ["make", "info-build-json"],
-        cwd=clear_flash_src_path,
-        env=env,
-        capture_output=True,
-        check=True,
-    )
-    build_info = json.loads(p.stdout)
-    flash_file = Path(build_info["FLASHFILE"])
-    clear_flash_bin_path = (
-        EXPERIMENT_FOLDER / f"{node.deveui}_clear_flash{flash_file.suffix}"
-    )
-    copy(flash_file, clear_flash_bin_path)
-    node.clear_flash_path = clear_flash_bin_path
-    p = subprocess_run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
-    ## find flash file
-    p = subprocess_run(
-        ["make", "info-build-json"],
-        cwd=SRC_PATH,
-        env=env,
-        capture_output=True,
-        check=True,
-    )
-    build_info = json.loads(p.stdout)
-    flash_file = Path(build_info["FLASHFILE"])
+    clear_flash_src_path = SRC_PATH / ".."
+    if node.riot_board == "b-l072z-lrwan1":
+        logging.info(f"board is b-l072z-lrwan1, making eeprom clear...")
+        clear_flash_src_path /= "clear_eeprom"
+    elif node.riot_board == "samr34-xpro":
+        logging.info(f"board is samr34-xpro, making flash clear...")
+        clear_flash_src_path /= "clear_flash"
+    elif node.riot_board == "esp32-ttgo-t-beam":
+        clear_flash_src_path = None
+
+    if clear_flash_src_path is not None:
+        subprocess_run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
+        p = subprocess_run(
+            ["make", "info-build-json"],
+            cwd=clear_flash_src_path,
+            env=env,
+            capture_output=True,
+            check=True,
+        )
+        build_info = json.loads(p.stdout)
+        flash_file = Path(build_info["FLASHFILE"])
+        clear_flash_bin_path = (
+            EXPERIMENT_FOLDER / f"{node.deveui}_clear_config{flash_file.suffix}"
+        )
+        copy(flash_file, clear_flash_bin_path)
+        node.clear_flash_path = clear_flash_bin_path
+        p = subprocess_run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
+        ## find flash file
+        p = subprocess_run(
+            ["make", "info-build-json"],
+            cwd=SRC_PATH,
+            env=env,
+            capture_output=True,
+            check=True,
+        )
+        build_info = json.loads(p.stdout)
+        flash_file = Path(build_info["FLASHFILE"])
     firmware_path = EXPERIMENT_FOLDER / f"{node.deveui}_terra{flash_file.suffix}"
     copy(flash_file, firmware_path)
     node.terra_path = firmware_path
