@@ -130,7 +130,7 @@ def make_and_assign_firmware(node: configuration.Node):
         clear_flash_src_path = None
 
     if clear_flash_src_path is not None:
-        subprocess_run(["make", "all"], cwd=clear_flash_src_path, env=env, check=True)
+        subprocess_run(["make", "all", "-j8"], cwd=clear_flash_src_path, env=env, check=True)
         p = subprocess_run(
             ["make", "info-build-json"],
             cwd=clear_flash_src_path,
@@ -145,7 +145,7 @@ def make_and_assign_firmware(node: configuration.Node):
         )
         copy(flash_file, clear_flash_bin_path)
         node.clear_flash_path = clear_flash_bin_path
-        p = subprocess_run(["make", "all"], cwd=SRC_PATH, env=env, check=True)
+        p = subprocess_run(["make", "all", "-j8"], cwd=SRC_PATH, env=env, check=True)
         ## find flash file
         p = subprocess_run(
             ["make", "info-build-json"],
