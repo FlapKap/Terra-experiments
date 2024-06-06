@@ -843,6 +843,7 @@ async def mqtt_clear_down_queue_coroutine():
                 topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
                 payload = {"downlinks": []}
                 await client.publish(topic, json.dumps(payload))
+                await asyncio.sleep(1)
     except asyncio.CancelledError:
         logging.info("canceling mqtt_clear_down_queue_coroutine")
         raise
@@ -877,6 +878,7 @@ async def mqtt_submit_query_coroutine():
                     ]
                 }
                 await client.publish(topic, json.dumps(payload))
+                await asyncio.sleep(1)
     except asyncio.CancelledError:
         logging.info("canceling mqtt_submit_coroutine")
         raise
@@ -928,23 +930,6 @@ async def commit(db_con: sqlite3.Connection):
         logging.info("Stopping commit")
         raise
 
-
-async def data_collection_tasks(db_con: sqlite3.Connection):
-    tasks = []
-    for nodelist in NODES_BY_SITE.values():
-        site_url = nodelist[0].site_url
-        tasks.extend(
-            [
-                # serial_aggregation_coroutine(site_url),
-                # radio_coroutine(site_url, [n.oml_name for n in nodelist]),
-                mqtt_clear_down_queue_coroutine(),
-                mqtt_collect_coroutine(db_con),
-                mqtt_submit_query_coroutine(),
-            ]
-        )
-    # tasks.append(commit())
-
-    return await asyncio.gather(*tasks, return_exceptions=False)
 
 
 async def download_data_folder(
@@ -1214,28 +1199,36 @@ async def main():
     # go through nodes returned and populate internal node list with proper addresses
     populate_nodes_with_addresses_from_iotlab(iotlab_nodes)
 
-    
 
     # # clear flash on all boards
     logging.info("clearing flash on all boards")
     await asyncio.gather(*[upload_firmware(n, "clear_flash") for n in CONFIG.nodes])
     await asyncio.sleep(20)
+
+    # clear downlink queues
+    logging.info("clearing downlink queues")
+    await mqtt_clear_down_queue_coroutine()
+    await asyncio.sleep(1)
+    logging.info("starting data collection")
+    ## start all boards
+   #subprocess_run(["iotlab", "node", "--start", "-i", str(EXPERIMENT_ID)], check=True)
+    collection_task = asyncio.create_task(mqtt_collect_coroutine(db_con))
+
+    # submitting queries
+    await mqtt_submit_query_coroutine()
+
     if not cli_args.dont_upload:
         logging.info("uploading terra firmware to all boards")
-        # for n in CONFIG.nodes:
-        #     await upload_firmware(n)
+        for n in CONFIG.nodes:
+            await upload_firmware(n, "terra")
+            #do it one at a time to make sure they start offset from each other
 
-        await asyncio.gather(*[upload_firmware(n, "terra") for n in CONFIG.nodes])
+        #await asyncio.gather(*[upload_firmware(n, "terra") for n in CONFIG.nodes])
 
     # saving nodes in experiment db
     populate_nodes_table(db_con, CONFIG.nodes)
 
-    logging.info("starting data collection")
 
-    ## start all boards
-    subprocess_run(["iotlab", "node", "--start", "-i", str(EXPERIMENT_ID)], check=True)
-    await asyncio.sleep(5)
-    collection_task = asyncio.create_task(data_collection_tasks(db_con))
     # progress_task = asyncio.create_task(print_progress(db_con))
     await asyncio.sleep(5)
     while not collection_task.done():
