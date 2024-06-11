@@ -1,8 +1,8 @@
 {
     "USER": "berthels",
-    "SRC_PATH": "/home/flapkap/Terra/app/terra",
-    "DURATION": 20,
-    "EXECUTION_EPOCH_S": 15,
+    "SRC_PATH": "/home/kasper/Terra/app/terra",
+    "DURATION": 30,
+    "EXECUTION_EPOCH_S": 60,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
@@ -13,12 +13,32 @@
     },
     "NODES": [
         {
-            "TTN_DEVICE_ID": "eui-70b3d57ed005ea57",
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea59",
             "PROFILE": "stm32Profile",
             "RIOT_BOARD": "samr34-xpro",
             "IOT-LAB_BOARD_ID": "samr34",
             "IOT-LAB_RADIO_CHIPSET": "sx1276",
-            "DEVEUI": "70B3D57ED005EA57",
+            "DEVEUI": "70B3D57ED005EA59",
+            "APPEUI": "0000000000000000",
+            "SITE": "grenoble",
+            "SENSORS": [
+                {
+                    "NAME": "\"Button(SW0)\"",
+                    "TYPE": "SAUL_SENSE_BTN"
+                },
+                {
+                    "NAME": "\"Button(SW0)\"",
+                    "TYPE": "SAUL_SENSE_BTN"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea60",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "samr34-xpro",
+            "IOT-LAB_BOARD_ID": "samr34",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA60",
             "APPEUI": "0000000000000000",
             "SITE": "grenoble",
             "SENSORS": [
