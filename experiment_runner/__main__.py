@@ -15,7 +15,7 @@ import functools
 import regex
 import sqlite3
 import aiomqtt
-
+import random
 from experiment_runner import configuration
 
 from . import resources
@@ -265,7 +265,7 @@ async def upload_firmware(
         logging.error("Upload failed for node %s", node.deveui)
 
     # # stop node after upload, but only if terra
-    # if firmware == "terra" and not node.failed:
+    # if firmware == "terra" and not node.failed:   
     #     p = await asyncio_create_subprocess_exec(
     #         "iotlab",
     #         "node",
@@ -474,6 +474,33 @@ async def mqtt_collect_coroutine(db_con: sqlite3.Connection):
                                     "INSERT INTO Join_Message (join_message_id, app_received_at) VALUES (?,?)",
                                     (message_id, app_received_at),
                                 )
+                                # find device id for node with that dev_eui
+                                node = [n for n in CONFIG.nodes if n.deveui == dev_eui]
+                                if len(node) == 0:
+                                    logging.error(
+                                        f"Node {dev_eui} not found in configuration"
+                                    )
+                                    continue
+                                elif len(node) > 1:
+                                    logging.error(
+                                        f"Node {dev_eui} found more than once in configuration"
+                                    )
+                                    continue
+
+                                node = node[0]
+                                logging.info(f"Node {dev_eui} just joined. submitting query to node with ttn_device_id {node.ttn_device_id}...")
+                                topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
+                                payload = {
+                                    "downlinks": [
+                                        {
+                                            "f_port": 1,
+                                            "frm_payload": CONFIG.mqtt.payload,
+                                            "confirmed": CONFIG.mqtt.payload_confirmed,
+                                            "priority": "NORMAL",
+                                        }
+                                    ]
+                                }
+                                await client.publish(topic, json.dumps(payload))
                             case ["up"]:
                                 # region example
                                 # {
@@ -1214,12 +1241,14 @@ async def main():
    #subprocess_run(["iotlab", "node", "--start", "-i", str(EXPERIMENT_ID)], check=True)
     collection_task = asyncio.create_task(mqtt_collect_coroutine(db_con))
 
-    # submitting queries
-    await mqtt_submit_query_coroutine()
+    # # submitting queries
+    # await mqtt_submit_query_coroutine()
 
     if not cli_args.dont_upload:
         logging.info("uploading terra firmware to all boards")
         for n in CONFIG.nodes:
+            # sleep for a random amount of time between 0 and DURATION seconds to avoid all nodes starting synchronously
+            await asyncio.sleep(random.randint(0, CONFIG.duration))
             await upload_firmware(n, "terra")
             #do it one at a time to make sure they start offset from each other
 
