@@ -1,8 +1,8 @@
 {
     "USER": "berthels",
-    "SRC_PATH": "/home/flapkap/Terra/app/terra",
+    "SRC_PATH": "/home/kasper/Terra/app/terra",
     "DURATION": 20,
-    "EXECUTION_EPOCH_S": 15,
+    "EXECUTION_EPOCH_S": 30,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
