@@ -112,8 +112,8 @@ class Node:
     node_id: Optional[str] = None
     profile: Optional[str] = None
     sensors: Optional[List[Sensor]] = None
-    terra_path: Optional[Path] = None
-    clear_eeprom_path: Optional[Path] = None
+    terra_firmware_path: Optional[Path] = None
+    clear_config_firmware_path: Optional[Path] = None
     failed: bool = False
 
     @staticmethod
@@ -147,7 +147,10 @@ class Node:
 
     @property
     def network_address(self):
-        return f"{self.node_id}.{self.site}.iot-lab.info"
+        if self.node_id is None or self.site is None:
+            return None
+        else:
+            return f"{self.node_id}.{self.site}.iot-lab.info"
 
     @network_address.setter
     def network_address(self, value):

@@ -119,32 +119,32 @@ def make_and_assign_firmware(node: configuration.Node):
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
 
-    clear_flash_src_path = SRC_PATH / ".."
+    clear_firmware_src_path = SRC_PATH / ".."
     if node.riot_board == "b-l072z-lrwan1":
         logging.info(f"board is b-l072z-lrwan1, making eeprom clear...")
-        clear_flash_src_path /= "clear_eeprom"
+        clear_firmware_src_path /= "clear_eeprom"
     elif node.riot_board == "samr34-xpro":
         logging.info(f"board is samr34-xpro, making flash clear...")
-        clear_flash_src_path /= "clear_flash"
+        clear_firmware_src_path /= "clear_flash"
     elif node.riot_board == "esp32-ttgo-t-beam":
-        clear_flash_src_path = None
+        clear_firmware_src_path = None
 
-    if clear_flash_src_path is not None:
-        subprocess_run(["make", "all", "-j8"], cwd=clear_flash_src_path, env=env, check=True)
+    if clear_firmware_src_path is not None:
+        subprocess_run(["make", "all", "-j8"], cwd=clear_firmware_src_path, env=env, check=True)
         p = subprocess_run(
             ["make", "info-build-json"],
-            cwd=clear_flash_src_path,
+            cwd=clear_firmware_src_path,
             env=env,
             capture_output=True,
             check=True,
         )
         build_info = json.loads(p.stdout)
         flash_file = Path(build_info["FLASHFILE"])
-        clear_flash_bin_path = (
+        clear_config_bin_path = (
             EXPERIMENT_FOLDER / f"{node.deveui}_clear_config{flash_file.suffix}"
         )
-        copy(flash_file, clear_flash_bin_path)
-        node.clear_flash_path = clear_flash_bin_path
+        copy(flash_file, clear_config_bin_path)
+        node.clear_config_firmware_path = clear_config_bin_path
         p = subprocess_run(["make", "all", "-j8"], cwd=SRC_PATH, env=env, check=True)
         ## find flash file
         p = subprocess_run(
@@ -158,7 +158,7 @@ def make_and_assign_firmware(node: configuration.Node):
         flash_file = Path(build_info["FLASHFILE"])
     firmware_path = EXPERIMENT_FOLDER / f"{node.deveui}_terra{flash_file.suffix}"
     copy(flash_file, firmware_path)
-    node.terra_path = firmware_path
+    node.terra_firmware_path = firmware_path
 
 
 def make_and_assign_all_firmware(nodes: List[configuration.Node]):
@@ -170,9 +170,9 @@ def find_and_assign_all_firmware(nodes: List[configuration.Node]):
     for firmware_path in EXPERIMENT_FOLDER.glob("*.elf"):
         for node in nodes:
             if firmware_path.stem.lower() == f"{node.deveui.lower()}_terra":
-                node.terra_path = firmware_path
-            elif firmware_path.stem.lower() == f"{node.deveui.lower()}_clear_flash":
-                node.clear_flash_path = firmware_path
+                node.terra_firmware_path = firmware_path
+            elif firmware_path.stem.lower() == f"{node.deveui.lower()}_clear_config":
+                node.clear_config_firmware_path = firmware_path
 
 
 def has_prerequisites(prerequisites=("iotlab", "parallel", "ssh", "scp")):
@@ -197,12 +197,18 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
     logging.info("Registering experiment... ")
     node_strings = []
     for node in CONFIG.nodes:
-        node_strings.extend(
-            [
-                "-l",
-                f"1,archi={node.archi}+site={node.site},,{node.profile}",
-            ]
-        )
+        if node.node_id is not None:
+            node_strings.extend(
+                [ "-l",
+                  f"{node.site},{node.iot_lab_board_id},{node.node_id},,{node.profile}"]
+            )
+        else:
+            node_strings.extend(
+                [
+                    "-l",
+                    f"1,archi={node.archi}+site={node.site},,{node.profile}",
+                ]
+            )
 
     p = await asyncio_create_subprocess_exec(
         "iotlab",
@@ -226,19 +232,22 @@ async def register_experiment(nodes: List[configuration.Node]) -> int:
 
 
 async def upload_firmware(
-    node: configuration.Node, firmware: Literal["terra", "clear_flash"]
+    node: configuration.Node, firmware: Literal["terra", "clear_config"]
 ):
     global EXPERIMENT_ID
     if node.failed:
         return
     # check node contains info we need
-    if node.terra_path is None:
+    if node.terra_firmware_path is None:
         logging.error("Node %s has no firmware", node.deveui)
         return
     if node.node_string_by_id is None:
         logging.error("Node %s has no node string", node.deveui)
         return
-
+    if firmware == "clear_config" and node.clear_config_firmware_path is None:
+        logging.error("Node %s has no clear config firmware", node.deveui)
+        return
+    
     p = await asyncio_create_subprocess_exec(
         "iotlab",
         "node",
@@ -248,9 +257,9 @@ async def upload_firmware(
         node.node_string_by_id,
         "-fl",
         str(
-            node.terra_path.absolute()
+            node.terra_firmware_path.absolute()
             if firmware == "terra"
-            else node.clear_flash_path.absolute()
+            else node.clear_config_firmware_path.absolute()
         ),
         stdout=asyncio.subprocess.PIPE,
     )
@@ -1154,17 +1163,16 @@ async def is_experiment_running():
 
 
 def populate_nodes_with_addresses_from_iotlab(iotlab_nodes):
-    for n in iotlab_nodes:
-        try:
-            next(
-                filter(
-                    lambda nod: nod.archi == n["archi"] and nod.node_id is None,
-                    CONFIG.nodes,
-                )
-            ).network_address = n["network_address"]
-        except StopIteration:
-            logging.error("Node not found while populating internal node table")
-            sys.exit()
+    logging.info("Populating internal node table with IOT-LAB addresses")
+    for iotlab_node in iotlab_nodes:
+        matching_node = next(
+            (node for node in CONFIG.nodes if node.archi == iotlab_node["archi"] and node.network_address is None),
+            None,
+        )
+        if matching_node is not None:
+            matching_node.network_address = iotlab_node["network_address"]
+        else:
+            raise ValueError(f"Node not found: {iotlab_node['archi']}")
 
 
 # run all data collection tasks and await their completion
@@ -1228,8 +1236,8 @@ async def main():
 
 
     # # clear flash on all boards
-    logging.info("clearing flash on all boards")
-    await asyncio.gather(*[upload_firmware(n, "clear_flash") for n in CONFIG.nodes])
+    logging.info("resetting config on all boards")
+    await asyncio.gather(*[upload_firmware(n, "clear_config") for n in CONFIG.nodes])
     await asyncio.sleep(20)
 
     # clear downlink queues
