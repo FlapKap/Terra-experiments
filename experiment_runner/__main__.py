@@ -111,10 +111,13 @@ def make_and_assign_firmware(node: configuration.Node):
     logging.info("make firmware for device: %s", node.deveui)
     env = os.environ.copy()
     env["EXECUTION_EPOCH_S"] = str(CONFIG.execution_epoch_s)
+    env["FORCED_LISTEN_EVERY_N_LOOP"] = str(CONFIG.forced_listen_every_n_loop)
     env["BOARD"] = node.riot_board
     env["DEVEUI"] = node.deveui
     env["APPEUI"] = node.appeui
     env["APPKEY"] = SECRETS["LORAWAN"]["APPKEY"]
+    env["LORAMAC_DATA_RATE"] = CONFIG.loramac_data_rate
+    env["DEFAULT_QUERY_AS_PB_BASE64"] = CONFIG.default_query_as_pb_base64
     if node.sensors is not None:
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
         env["SENSOR_TYPES"] = " ".join([sensor.type for sensor in node.sensors])
@@ -497,6 +500,9 @@ async def mqtt_collect_coroutine(db_con: sqlite3.Connection):
                                     continue
 
                                 node = node[0]
+                                if len(CONFIG.mqtt.payload) == 0:
+                                    logging.info(f"Node {dev_eui} just joined. No query to submit, so skipping submission...")
+                                    continue
                                 logging.info(f"Node {dev_eui} just joined. submitting query to node with ttn_device_id {node.ttn_device_id}...")
                                 topic = CONFIG.mqtt.topic[:-1] + node.ttn_device_id + "/down/replace"
                                 payload = {
@@ -808,7 +814,7 @@ async def mqtt_collect_coroutine(db_con: sqlite3.Connection):
                                 frame_payload: str = parsed_msg[downlink_key][
                                     "frm_payload"
                                 ]
-                                confirmed: bool = parsed_msg[downlink_key]["confirmed"]
+                                confirmed: bool = parsed_msg[downlink_key].get("confirmed", False)
                                 priority: str = (
                                     "NORMAL"  # TODO: as soon as priority is provided by API fix this
                                 )
@@ -890,6 +896,9 @@ async def mqtt_clear_down_queue_coroutine():
 
 async def mqtt_submit_query_coroutine():
     global EXPERIMENT_ID
+    if len(CONFIG.mqtt.payload) == 0:
+        logging.info("no mqtt payload provided, skipping")
+        return
     try:
         async with aiomqtt.Client(
             hostname=CONFIG.mqtt.address,
@@ -909,7 +918,7 @@ async def mqtt_submit_query_coroutine():
                             "f_port": 1,
                             "frm_payload": CONFIG.mqtt.payload,
                             "confirmed": CONFIG.mqtt.payload_confirmed,
-                            "priority": "NORMAL",
+                            "priority": "HIGHEST",
                         }
                     ]
                 }

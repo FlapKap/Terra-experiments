@@ -1,8 +1,9 @@
 {
     "USER": "berthels",
     "SRC_PATH": "/home/kasper/Terra/app/terra",
-    "DURATION": 120,
-    "EXECUTION_EPOCH_S": 300,
+    "DURATION": 60,
+    "EXECUTION_EPOCH_S": 120,
+    "DEFAULT_QUERY_AS_PB_BASE64": "",
     "FORCED_LISTEN_EVERY_N_LOOP": 1,
     "LORAMAC_DATA_RATE": "LORAMAC_DR_0",
     "MQTT": {
@@ -10,7 +11,7 @@
         "PORT": 1883,
         "USERNAME": "nes-test-application@ttn",
         "TOPIC": "v3/nes-test-application@ttn/devices/#",
-        "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCAAKAhACCgIICAoCCBQKAggACgIwZAoCCAkKAggACgIwBAoCCAwKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
+        "PAYLOAD": "Cg4KDAoKCggKAggBCgIQAA==",
         "PAYLOAD_CONFIRMED": true
     },
     "NODES": [
