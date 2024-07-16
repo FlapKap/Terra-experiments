@@ -4,7 +4,7 @@
     "DURATION": 120,
     "EXECUTION_EPOCH_S": 300,
     "FORCED_LISTEN_EVERY_N_LOOP": 1,
-    "LORAMAC_DATA_RATE": "LORAMAC_DR_0",
+    "LORAMAC_DATA_RATE": "0",
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,

@@ -193,7 +193,7 @@ class Configuration:
     mqtt: Mqtt
     execution_epoch_s: int
     forced_listen_every_n_loop: int
-    loramac_data_rate: str
+    loramac_data_rate: int
     default_query_as_pb_base64: str
     nodes: List[Node]
 
@@ -206,7 +206,7 @@ class Configuration:
         mqtt = Mqtt.from_dict(obj.get("MQTT"))
         execution_epoch_s = from_int(obj.get("EXECUTION_EPOCH_S"))
         forced_listen_every_n_loop = from_int(obj.get("FORCED_LISTEN_EVERY_N_LOOP"))
-        loramac_data_rate = from_str(obj.get("LORAMAC_DATA_RATE"))
+        loramac_data_rate = from_int(obj.get("LORAMAC_DATA_RATE"))
         default_query_as_pb_base64 = from_str(obj.get("DEFAULT_QUERY_AS_PB_BASE64"))
         nodes = from_list(Node.from_dict, obj.get("NODES"))
         return Configuration(user, src_path, duration, mqtt, execution_epoch_s, forced_listen_every_n_loop, loramac_data_rate, default_query_as_pb_base64, nodes)
@@ -219,7 +219,7 @@ class Configuration:
             "MQTT": to_class(Mqtt, self.mqtt),
             "EXECUTION_EPOCH_S": from_int(self.execution_epoch_s),
             "FORCED_LISTEN_EVERY_N_LOOP": from_int(self.forced_listen_every_n_loop),
-            "LORAMAC_DATA_RATE": from_str(self.loramac_data_rate),
+            "LORAMAC_DATA_RATE": from_int(self.loramac_data_rate),
             "DEFAULT_QUERY_AS_PB_BASE64": from_str(self.default_query_as_pb_base64),
             "NODES": from_list(lambda x: to_class(Node, x), self.nodes)
         }
