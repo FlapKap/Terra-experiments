@@ -9,7 +9,7 @@
         "USERNAME": "nes-test-application@ttn",
         "TOPIC": "v3/nes-test-application@ttn/devices/#",
         "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCAAKAhACCgIICAoCCBQKAggACgIwZAoCCAkKAggACgIwBAoCCAwKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
-        "PAYLOAD_CONFIRMED": true
+        "PAYLOAD_CONFIRMED": false
     },
     "NODES": [
         {

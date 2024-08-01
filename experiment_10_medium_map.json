@@ -5,14 +5,14 @@
     "EXECUTION_EPOCH_S": 120,
     "DEFAULT_QUERY_AS_PB_BASE64": "",
     "FORCED_LISTEN_EVERY_N_LOOP": 1,
-    "LORAMAC_DATA_RATE": "0",
+    "LORAMAC_DATA_RATE": 0,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
         "USERNAME": "nes-test-application@ttn",
         "TOPIC": "v3/nes-test-application@ttn/devices/#",
         "PAYLOAD": "CiwKKgooCiQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCBQQAg==",
-        "PAYLOAD_CONFIRMED": true
+        "PAYLOAD_CONFIRMED": false
     },
     "NODES": [
         {

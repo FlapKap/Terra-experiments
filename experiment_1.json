@@ -3,13 +3,16 @@
     "SRC_PATH": "/home/kasper/Terra/app/terra",
     "DURATION": 20,
     "EXECUTION_EPOCH_S": 15,
+    "FORCED_LISTEN_EVERY_N_LOOP": 1,
+    "DEFAULT_QUERY_AS_PB_BASE64": "",
+    "LORAMAC_DATA_RATE": 0,
     "MQTT": {
         "ADDRESS": "eu1.cloud.thethings.network",
         "PORT": 1883,
         "USERNAME": "nes-test-application@ttn",
         "TOPIC": "v3/nes-test-application@ttn/devices/#",
         "PAYLOAD": "CmwKagpoCmQKAggBCgIQAAoCCAAKAhAICgIICgoCCAEKAhABCgIICwoCCAAKAhACCgIICAoCCBQKAggACgIwZAoCCAkKAggACgIwBAoCCAwKAggACgIwBAoCCBAKAggSCgIIAAoCMAQKAggLEAI=",
-        "PAYLOAD_CONFIRMED": true
+        "PAYLOAD_CONFIRMED": false
     },
     "NODES": [
         {

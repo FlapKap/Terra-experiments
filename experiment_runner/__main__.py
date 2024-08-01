@@ -116,7 +116,7 @@ def make_and_assign_firmware(node: configuration.Node):
     env["DEVEUI"] = node.deveui
     env["APPEUI"] = node.appeui
     env["APPKEY"] = SECRETS["LORAWAN"]["APPKEY"]
-    env["LORAMAC_DATA_RATE"] = CONFIG.loramac_data_rate
+    env["LORAMAC_DATA_RATE"] = str(CONFIG.loramac_data_rate)
     env["DEFAULT_QUERY_AS_PB_BASE64"] = CONFIG.default_query_as_pb_base64
     if node.sensors is not None:
         env["SENSOR_NAMES"] = " ".join([sensor.name for sensor in node.sensors])
