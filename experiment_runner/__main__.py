@@ -89,6 +89,8 @@ EXPERIMENT_ID = (
 
 EXPERIMENT_FOLDER: Path = cli_args.experiment_folder
 DATA_FOLDER = EXPERIMENT_FOLDER / "data"
+FIRMWARE_FOLDER = EXPERIMENT_FOLDER / "firmwares"
+DATABASE_FOLDER = EXPERIMENT_FOLDER / "databases"
 EXPERIMENT_CONFIG_PATH = cli_args.config
 CONFIG = configuration.configuration_from_json(EXPERIMENT_CONFIG_PATH.read_text())
 SECRETS = json.loads(cli_args.secrets.read_text())
@@ -144,7 +146,7 @@ def make_and_assign_firmware(node: configuration.Node):
         build_info = json.loads(p.stdout)
         flash_file = Path(build_info["FLASHFILE"])
         clear_config_bin_path = (
-            EXPERIMENT_FOLDER / f"{node.deveui}_clear_config{flash_file.suffix}"
+            FIRMWARE_FOLDER / f"{node.deveui}_clear_config{flash_file.suffix}"
         )
         copy(flash_file, clear_config_bin_path)
         node.clear_config_firmware_path = clear_config_bin_path
@@ -159,7 +161,7 @@ def make_and_assign_firmware(node: configuration.Node):
         )
         build_info = json.loads(p.stdout)
         flash_file = Path(build_info["FLASHFILE"])
-    firmware_path = EXPERIMENT_FOLDER / f"{node.deveui}_terra{flash_file.suffix}"
+    firmware_path = FIRMWARE_FOLDER / f"{node.deveui}_terra{flash_file.suffix}"
     copy(flash_file, firmware_path)
     node.terra_firmware_path = firmware_path
 
@@ -170,7 +172,7 @@ def make_and_assign_all_firmware(nodes: List[configuration.Node]):
 
 
 def find_and_assign_all_firmware(nodes: List[configuration.Node]):
-    for firmware_path in EXPERIMENT_FOLDER.glob("*.elf"):
+    for firmware_path in FIRMWARE_FOLDER.glob("*.elf"):
         for node in nodes:
             if firmware_path.stem.lower() == f"{node.deveui.lower()}_terra":
                 node.terra_firmware_path = firmware_path
@@ -1221,7 +1223,7 @@ async def main():
     # find experiment
     await wait_for_experiment_to_start()
 
-    db_path = EXPERIMENT_FOLDER / f"{EXPERIMENT_ID}.db"
+    db_path = DATABASE_FOLDER / f"{EXPERIMENT_ID}.db"
     logging.info("Create SQLite for experiment data at %s", db_path)
     # Check if file already exists
     if db_path.exists():
