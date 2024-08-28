@@ -1,0 +1,239 @@
+{
+    "USER": "berthels",
+    "SRC_PATH": "/home/kasper/Terra/app/terra",
+    "DURATION": 60,
+    "EXECUTION_EPOCH_S": 120,
+    "DEFAULT_QUERY_AS_PB_BASE64": "",
+    "FORCED_LISTEN_EVERY_N_LOOP": 1,
+    "LORAMAC_DATA_RATE": 0,
+    "MQTT": {
+        "ADDRESS": "eu1.cloud.thethings.network",
+        "PORT": 1883,
+        "USERNAME": "nes-test-application@ttn",
+        "TOPIC": "v3/nes-test-application@ttn/devices/#",
+        "PAYLOAD": "Cj4KPAo6CjgKAggBCgIQAAoCCAAKAhAICgIICgoCCBIKAggBCgIQAQoCCAsKAggUCgIIAAoCEAgKAggKCgIIEg==",
+        "PAYLOAD_CONFIRMED": false
+    },
+    "NODES": [
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea59",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA59",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea60",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA60",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea61",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA61",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea62",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA62",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea63",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA63",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea64",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA64",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea65",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA65",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea66",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA66",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea67",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA67",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea68",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA68",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        },
+        {
+            "TTN_DEVICE_ID": "eui-70b3d57ed005ea69",
+            "PROFILE": "stm32Profile",
+            "RIOT_BOARD": "b-l072z-lrwan1",
+            "IOT-LAB_BOARD_ID": "st-lrwan1",
+            "IOT-LAB_RADIO_CHIPSET": "sx1276",
+            "DEVEUI": "70B3D57ED005EA69",
+            "APPEUI": "0000000000000000",
+            "SITE": "saclay",
+            "SENSORS": [
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_TEMP"
+                },
+                {
+                    "NAME": "hts221",
+                    "TYPE": "SAUL_SENSE_HUM"
+                }
+            ]
+        }
+    ]
+}
