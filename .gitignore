@@ -1,6 +1,9 @@
 ##secrets
 secrets.json
 
+#figures
+*.pdf
+
 #build files
 *.elf
 #datafiles
@@ -9,6 +12,8 @@ data/
 *.duckdb.wal
 *.db
 *.bin
+*.parquet
+
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,windows,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,macos,windows,python
 
